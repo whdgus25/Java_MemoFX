@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Scanner;
 
 public class MemoManager {
 
@@ -26,6 +27,22 @@ public class MemoManager {
             writer.write("내용:\n" + content);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static String[] readMemo(File file) {
+        try (Scanner scanner = new Scanner(file)) {
+            String titleLine = scanner.nextLine(); // "제목: xxx"
+            scanner.nextLine();
+            StringBuilder content = new StringBuilder();
+            while (scanner.hasNextLine()) {
+                content.append(scanner.nextLine()).append("\n");
+            }
+            String title = titleLine.replace("제목: ", "").trim();
+            return new String[]{title, content.toString().trim()};
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 }
