@@ -27,11 +27,14 @@ public class MemoManager {
     }
 
     public static void saveMemo(String title, String content) {
-        File file = new File(memoFolder, title +".txt");
+        String safeTitle = toSafeFileName(title);
+        File file = new File(memoFolder, safeTitle +".txt");
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write("제목: " + title);
             writer.newLine();
-            writer.write("내용: \n" + content);
+            writer.write("---");
+            writer.newLine();
+            writer.write(content);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -41,7 +44,9 @@ public class MemoManager {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write("제목: " + title);
             writer.newLine();
-            writer.write("내용: \n" + content);
+            writer.write("---");
+            writer.newLine();
+            writer.write(content);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -49,16 +54,44 @@ public class MemoManager {
 
     public static String[] readMemo(File file) {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String title = reader.readLine();
+            String titleLine = reader.readLine();
+
+            if (titleLine == null || !titleLine.startsWith("제목: ")) {
+                return null;
+            }
+
+            String title = titleLine.substring("제목: ".length()).trim();
+
+            String separator = reader.readLine();
+            if (separator == null || !separator.equals("---")) {
+                return null;
+            }
+
+
             StringBuilder content = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 content.append(line).append(System.lineSeparator());
             }
+
             return new String[]{title, content.toString().trim()};
         } catch (IOException e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static String getUniqueTitle(String baseTitle) {
+        String newTitle = baseTitle;
+        int count = 1;
+        while (new File(memoFolder, newTitle + ".txt").exists()) {
+            newTitle = baseTitle + " (" + count + ")";
+            count ++;
+        }
+        return newTitle;
+    }
+
+    public static String toSafeFileName(String title) {
+        return title.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
 }

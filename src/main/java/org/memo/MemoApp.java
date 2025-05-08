@@ -10,8 +10,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-
 import java.io.File;
+import java.util.Optional;
 
 public class MemoApp extends Application {
 
@@ -38,13 +38,28 @@ public class MemoApp extends Application {
 
             if (title.isEmpty() || content.isEmpty()) {
                 showAlert("입력 오류", "제목과 내용을 모두 입력해주세요.");
-            } else {
-                MemoManager.saveMemo(title, content);
-                titleField.clear();
-                memoArea.clear();
-                loadMemoList();
-                showAlert("저장 완료", "메모가 저장되었습니다.");
+                return;
             }
+
+            File file = new File(MemoManager.getMemoFolder(), title + ".txt");
+
+            if (file.exists()) {
+                Alert overwriteAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                overwriteAlert.setTitle("파일 덮어쓰기 경고");
+                overwriteAlert.setHeaderText("같은 제목의 메모가 이미 존재합니다.");
+                overwriteAlert.setContentText("덮어쓰시겠습니까?");
+
+                Optional<ButtonType> result = overwriteAlert.showAndWait();
+                if (result.isEmpty() || result.get() != ButtonType.OK) {
+                    title = MemoManager.getUniqueTitle(title);
+                }
+
+            }
+            MemoManager.saveMemo(title, content);
+            titleField.clear();
+            memoArea.clear();
+            loadMemoList();
+            showAlert("저장 완료", "메모가 저장되었습니다.");
         });
 
         saveAsButton.setOnAction(e -> {
