@@ -15,11 +15,15 @@ public class MemoManager {
         if (!memoFolder.exists()) memoFolder.mkdirs();
 
         String timestamp = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-        File memoFile = new File(memoFolder, timestamp + ".txt");
+        File memoFile = new File(memoFolder, title +"_"+ timestamp + ".txt");
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(memoFile))) {
+        saveMemoToFile(memoFile, title, content);
+    }
+
+    public static void saveMemoToFile(File file, String title, String content) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write("제목: " + title + "\n");
-            writer.write("내용: " + content);
+            writer.write("내용:\n" + content);
         } catch (IOException e) {
             e.printStackTrace();
         }
