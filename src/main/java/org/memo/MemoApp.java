@@ -28,6 +28,7 @@ public class MemoApp extends Application {
         Button saveButton = new Button("저장");
         Button saveAsButton = new Button("다른 이름으로 저장");
         Button settingButton = new Button("저장 위치 설정");
+        Button deleteButton = new Button("삭제");
 
         memoListView = new ListView<>();
         loadMemoList();
@@ -87,9 +88,40 @@ public class MemoApp extends Application {
             File selectedDirectory = directoryChooser.showDialog(primaryStage);
 
             if (selectedDirectory != null) {
-                MemoManager.setMemoFolder(selectedDirectory);
+                File memoSubFolder = new File(selectedDirectory, "memos");
+                if (!memoSubFolder.exists()) {
+                    memoSubFolder.mkdirs();
+                }
+                MemoManager.setMemoFolder(memoSubFolder);
                 loadMemoList();
                 Platform.runLater(() -> showAlert("설정 완료", "저장 위치가 변경되었습니다."));
+            }
+        });
+
+        deleteButton.setOnAction(e-> {
+            String selectedMemo = memoListView.getSelectionModel().getSelectedItem();
+            if (selectedMemo == null) {
+                showAlert("선택 오류", "삭제할 메모를 선택해주세요.");
+                return;
+            }
+
+            Alert deleteAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            deleteAlert.setTitle("메모 삭제");
+            deleteAlert.setHeaderText("선택한 메모를 삭제하시겠습니까?");
+            deleteAlert.setContentText("삭제 후 되돌릴 수 없습니다.");
+
+            Optional<ButtonType> result = deleteAlert.showAndWait();
+            if (result.isEmpty() || result.get() != ButtonType.OK) {
+                return;
+            }
+
+            File file = new File(MemoManager.getMemoFolder(), selectedMemo);
+            if (file.exists()) {
+                file.delete();
+                loadMemoList();
+                showAlert("삭제 완료", "메모가 삭제되었습니다.");
+            } else {
+                showAlert("삭제 오류", "파일을 찾을 수 없습니다.");
             }
         });
 
@@ -109,7 +141,7 @@ public class MemoApp extends Application {
         VBox rightPanel = new VBox(10,
                 new Label("제목:"), titleField,
                 new Label("메모 내용:"), memoArea,
-                new HBox(10, saveButton, saveAsButton, settingButton)
+                new HBox(10, saveButton, saveAsButton, settingButton, deleteButton)
         );
 
         leftPanel.setPrefWidth(200);
