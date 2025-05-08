@@ -1,48 +1,64 @@
 package org.memo;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Scanner;
+import java.io.*;
 
 public class MemoManager {
 
-    private static final File memoFolder = new File("memos");
+    private static File memoFolder;
+
+    // 기본 저장 경로는 사용자 바탕화면의 "memos" 폴더
+    static {
+        String userHome = System.getProperty("user.home");
+        memoFolder = new File(userHome, "Desktop/memos");
+        if (!memoFolder.exists()) {
+            memoFolder.mkdirs();
+        }
+    }
+
+    public static File getMemoFolder() {
+        return memoFolder;
+    }
+
+    public static void setMemoFolder(File folder) {
+        memoFolder = folder;
+        if (!memoFolder.exists()) {
+            memoFolder.mkdirs();
+        }
+    }
 
     public static void saveMemo(String title, String content) {
-        if (!memoFolder.exists()) memoFolder.mkdirs();
-
-        String timestamp = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-        File memoFile = new File(memoFolder, title +"_"+ timestamp + ".txt");
-
-        saveMemoToFile(memoFile, title, content);
+        File file = new File(memoFolder, title +".txt");
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            writer.write("제목: " + title);
+            writer.newLine();
+            writer.write("내용: \n" + content);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void saveMemoToFile(File file, String title, String content) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-            writer.write("제목: " + title + "\n");
-            writer.write("내용:\n" + content);
+            writer.write("제목: " + title);
+            writer.newLine();
+            writer.write("내용: \n" + content);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public static String[] readMemo(File file) {
-        try (Scanner scanner = new Scanner(file)) {
-            String titleLine = scanner.nextLine(); // "제목: xxx"
-            scanner.nextLine();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String title = reader.readLine();
             StringBuilder content = new StringBuilder();
-            while (scanner.hasNextLine()) {
-                content.append(scanner.nextLine()).append("\n");
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append(System.lineSeparator());
             }
-            String title = titleLine.replace("제목: ", "").trim();
             return new String[]{title, content.toString().trim()};
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
-            return null;
         }
+        return null;
     }
 }

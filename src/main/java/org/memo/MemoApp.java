@@ -1,17 +1,21 @@
 package org.memo;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
 
 public class MemoApp extends Application {
+
+    private ListView<String> memoListView;
 
     @Override
     public void start(Stage primaryStage) {
@@ -23,9 +27,10 @@ public class MemoApp extends Application {
 
         Button saveButton = new Button("저장");
         Button saveAsButton = new Button("다른 이름으로 저장");
+        Button settingButton = new Button("저장 위치 설정");
 
-        ListView<String> memoListView = new ListView<>();
-        loadMemoList(memoListView);
+        memoListView = new ListView<>();
+        loadMemoList();
 
         saveButton.setOnAction(e -> {
             String title = titleField.getText().trim();
@@ -37,7 +42,7 @@ public class MemoApp extends Application {
                 MemoManager.saveMemo(title, content);
                 titleField.clear();
                 memoArea.clear();
-                loadMemoList(memoListView);
+                loadMemoList();
                 showAlert("저장 완료", "메모가 저장되었습니다.");
             }
         });
@@ -47,25 +52,35 @@ public class MemoApp extends Application {
             String content = memoArea.getText().trim();
 
             if (title.isEmpty() || content.isEmpty()) {
-                showAlert("입력 오류", "제목과 내용을 모두 입력해주세요.");
+                showAlert("입력오류", "제목과 내용을 모두 입력해주세요.");
             } else {
                 FileChooser fileChooser = new FileChooser();
                 fileChooser.setTitle("다른 이름으로 저장");
                 fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("텍스트 파일", "*.txt"));
-
                 File file = fileChooser.showSaveDialog(primaryStage);
-
                 if (file != null) {
                     MemoManager.saveMemoToFile(file, title, content);
-                    loadMemoList(memoListView);
-                    showAlert("저장 완료", "파일이 저장되었습니다.");
+                    loadMemoList();
+                    showAlert("저장완료", "파일이 저장되었습니다.");
                 }
             }
         });
 
-        memoListView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                File file = new File("memos", newValue);
+        settingButton.setOnAction(e -> {
+            DirectoryChooser directoryChooser = new DirectoryChooser();
+            directoryChooser.setTitle("저장할 폴더 선택");
+            File selectedDirectory = directoryChooser.showDialog(primaryStage);
+
+            if (selectedDirectory != null) {
+                MemoManager.setMemoFolder(selectedDirectory);
+                loadMemoList();
+                Platform.runLater(() -> showAlert("설정 완료", "저장 위치가 변경되었습니다."));
+            }
+        });
+
+        memoListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                File file = new File(MemoManager.getMemoFolder(), newVal);
                 String[] result = MemoManager.readMemo(file);
                 if (result != null) {
                     titleField.setText(result[0]);
@@ -79,7 +94,7 @@ public class MemoApp extends Application {
         VBox rightPanel = new VBox(10,
                 new Label("제목:"), titleField,
                 new Label("메모 내용:"), memoArea,
-                new HBox(10, saveButton, saveAsButton)
+                new HBox(10, saveButton, saveAsButton, settingButton)
         );
 
         leftPanel.setPrefWidth(200);
@@ -88,7 +103,7 @@ public class MemoApp extends Application {
         HBox root = new HBox(20, leftPanel, rightPanel);
         root.setPadding(new Insets(10));
 
-        Scene scene = new Scene(root, 700, 400);
+        Scene scene = new Scene(root, 750, 400);
         primaryStage.setTitle("메모장");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -101,19 +116,18 @@ public class MemoApp extends Application {
         alert.showAndWait();
     }
 
-    private void loadMemoList(ListView<String> listView) {
-        File memoFolder = new File("memos");
-        listView.getItems().clear();
+    private void loadMemoList() {
+        File memoFolder = MemoManager.getMemoFolder();
+        memoListView.getItems().clear();
         if (memoFolder.exists()) {
             File[] files = memoFolder.listFiles((dir, name) -> name.endsWith(".txt"));
             if (files != null) {
                 for (File file : files) {
-                    listView.getItems().add(file.getName());
+                    memoListView.getItems().add(file.getName());
                 }
             }
         }
     }
-
 
     public static void main(String[] args) {
         launch(args);
