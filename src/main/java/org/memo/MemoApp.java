@@ -15,26 +15,27 @@ import java.util.Optional;
 
 public class MemoApp extends Application {
 
-    private ListView<String> memoListView;
-    private TextField titleField, searchField;
-    private TextArea memoArea;
-    private Label statusLabel;
-    private boolean isDarkMode = false;
+    private ListView<String> memoListView;      // 메모 목록 표시
+    private TextField titleField, searchField;  // 제목 입력, 검색 필드
+    private TextArea memoArea;                  // 메모 내용 입력 영역
+    private Label statusLabel;                  // 상태 표시 레이블
+    private boolean isDarkMode = false;         // 테마 상태 플레그
     private Scene scene;
 
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("메모장");
 
-        // 좌측: 메모 목록 + 검색
+        // 검색창 및 메모 리스트
         searchField = new TextField();
         searchField.setPromptText("제목 검색...");
         searchField.textProperty().addListener((obs, oldVal, newVal) -> filterMemoList(newVal.trim()));
 
         memoListView = new ListView<>();
         memoListView.setStyle("-fx-font-size: 13px;");
-        loadMemoList();
+        loadMemoList(); // 메모 리스트 초기 로드
 
+        // 메모 선택 시 제목과 내용 로드
         memoListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 File file = new File(MemoManager.getMemoFolder(), newVal);
@@ -92,6 +93,7 @@ public class MemoApp extends Application {
         primaryStage.show();
     }
 
+    // 저장 버튼
     private void handleSave() {
         String title = titleField.getText().trim();
         String content = memoArea.getText().trim();
@@ -103,6 +105,7 @@ public class MemoApp extends Application {
 
         File file = new File(MemoManager.getMemoFolder(), MemoManager.toSafeFileName(title) + ".txt");
 
+        // 파일이 이미 존재하는 경우 덮어쓰기 확인
         if (file.exists()) {
             Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
             confirm.setTitle("덮어쓰기 확인");
@@ -121,6 +124,7 @@ public class MemoApp extends Application {
         showAlert("저장 완료", "메모가 저장되었습니다.");
     }
 
+    // 다른 이름 저장 버튼
     private void handleSaveAs(Stage stage) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("다른 이름으로 저장");
@@ -133,6 +137,7 @@ public class MemoApp extends Application {
         }
     }
 
+    // 저장 폴더 위치 설정
     private void handleSetFolder(Stage stage) {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle("저장 위치 선택");
@@ -146,6 +151,7 @@ public class MemoApp extends Application {
         }
     }
 
+    // 메모 삭제
     private void handleDelete() {
         String selected = memoListView.getSelectionModel().getSelectedItem();
         if (selected == null) {
@@ -171,11 +177,13 @@ public class MemoApp extends Application {
         }
     }
 
+    // 다크/라이트 테마 전환
     private void toggleTheme() {
         isDarkMode = !isDarkMode;
         applyTheme();
     }
 
+    // 테마 적용
     private void applyTheme() {
         scene.getStylesheets().clear();
         if (isDarkMode) {
@@ -185,6 +193,7 @@ public class MemoApp extends Application {
         }
     }
 
+    // 키워드에 맞는 메모 필터링
     private void filterMemoList(String keyword) {
         memoListView.getItems().clear();
         File folder = MemoManager.getMemoFolder();
@@ -196,10 +205,12 @@ public class MemoApp extends Application {
         }
     }
 
+    // 전체 메모 목록 로드
     private void loadMemoList() {
         filterMemoList("");
     }
 
+    // 경고창 또는 알림창 표시
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
