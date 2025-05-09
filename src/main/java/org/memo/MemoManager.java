@@ -15,10 +15,10 @@ public class MemoManager {
         if (configFile.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(configFile))) {
                 String path = reader.readLine();
-                if (path != null && !path.isBlank()) {
-                    File saveFolder = new File(path);
-                    if (saveFolder.exists() && saveFolder.isDirectory()) {
-                        memoFolder = saveFolder;
+                if (path != null) {
+                    File saved = new File(path);
+                    if (saved.exists()) {
+                        memoFolder = saved;
                         return;
                     }
                 }
@@ -26,37 +26,28 @@ public class MemoManager {
                 e.printStackTrace();
             }
         }
-        // 기본 경로로 설정 (기본: 바탕화면/memos)
-        String userHome = System.getProperty("user.home");
-        memoFolder = new File(userHome, "Desktop/memos");
-        if (!memoFolder.exists()) {
-            memoFolder.mkdirs();
-        }
+
+        // 기본: 바탕화면/memos
+        File defaultFolder = new File(System.getProperty("user.home"), "Desktop/memos");
+        if (!defaultFolder.exists()) defaultFolder.mkdirs();
+        memoFolder = defaultFolder;
     }
 
-    // 저장된 memoFolder 반환
     public static File getMemoFolder() {
         return memoFolder;
     }
-    // 새로운 저장 위치 설정 후 설정 파일에 경로를 기록
+
     public static void setMemoFolder(File folder) {
         memoFolder = folder;
-        if (!memoFolder.exists()) {
-            memoFolder.mkdirs();
-        }
-
-        // 설정 파일에 경로 저장
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(configFile))){
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(configFile))) {
             writer.write(folder.getAbsolutePath());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    // 메모 저장
     public static void saveMemo(String title, String content) {
-        String safeTitle = toSafeFileName(title);
-        File file = new File(memoFolder, safeTitle +".txt");
+        File file = new File(memoFolder, toSafeFileName(title) + ".txt");
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write("제목: " + title);
             writer.newLine();
@@ -68,7 +59,6 @@ public class MemoManager {
         }
     }
 
-    // 다른 이름으로 메모 저장
     public static void saveMemoToFile(File file, String title, String content) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write("제목: " + title);
@@ -81,22 +71,12 @@ public class MemoManager {
         }
     }
 
-    // 메모 파일 읽기
     public static String[] readMemo(File file) {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String titleLine = reader.readLine();
-
-            if (titleLine == null || !titleLine.startsWith("제목: ")) {
-                return null;
-            }
-
-            String title = titleLine.substring("제목: ".length()).trim();
-
-            String separator = reader.readLine();
-            if (separator == null || !separator.equals("---")) {
-                return null;
-            }
-
+            if (titleLine == null || !titleLine.startsWith("제목: ")) return null;
+            String title = titleLine.substring("제목: ".length());
+            reader.readLine(); // skip separator
 
             StringBuilder content = new StringBuilder();
             String line;
@@ -107,22 +87,19 @@ public class MemoManager {
             return new String[]{title, content.toString().trim()};
         } catch (IOException e) {
             e.printStackTrace();
+            return null;
         }
-        return null;
     }
 
-    // 중복된 제목을 피하기 위해 유니크한 제목 생성
     public static String getUniqueTitle(String baseTitle) {
-        String newTitle = baseTitle;
         int count = 1;
-        while (new File(memoFolder, newTitle + ".txt").exists()) {
-            newTitle = baseTitle + " (" + count + ")";
-            count ++;
+        String newTitle = baseTitle;
+        while (new File(memoFolder, toSafeFileName(newTitle) + ".txt").exists()) {
+            newTitle = baseTitle + " (" + count++ + ")";
         }
         return newTitle;
     }
 
-    // 파일명으로 사용할 수 없는 문자를 대체
     public static String toSafeFileName(String title) {
         return title.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
