@@ -21,6 +21,7 @@ public class MemoApp extends Application {
     private Label statusLabel;                  // 상태 표시 레이블
     private boolean isDarkMode = false;         // 테마 상태 플레그
     private Scene scene;
+    private String currentMemoFileName = null;
 
     @Override
     public void start(Stage primaryStage) {
@@ -48,6 +49,18 @@ public class MemoApp extends Application {
             }
         });
 
+        memoListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                File file = new File(MemoManager.getMemoFolder(), newVal);
+                String[] result = MemoManager.readMemo(file);
+                if (result != null) {
+                    titleField.setText(result[0]);
+                    memoArea.setText(result[1]);
+                    currentMemoFileName = newVal;
+                }
+            }
+        });
+
         VBox leftPanel = new VBox(10, new Label("메모 목록:"), searchField, memoListView);
         leftPanel.setPrefWidth(250);
 
@@ -63,27 +76,30 @@ public class MemoApp extends Application {
         Button saveAsBtn = new Button("📁 다른 이름으로");
         Button settingBtn = new Button("🛠 저장 위치");
         Button deleteBtn = new Button("🗑 삭제");
+        Button modifyBtn = new Button("📝 수정");
         Button themeBtn = new Button("🌙 테마 전환");
 
         saveBtn.setOnAction(e -> handleSave());
         saveAsBtn.setOnAction(e -> handleSaveAs(primaryStage));
         settingBtn.setOnAction(e -> handleSetFolder(primaryStage));
         deleteBtn.setOnAction(e -> handleDelete());
+        modifyBtn.setOnAction(e -> handleModify());
         themeBtn.setOnAction(e -> toggleTheme());
+
 
         statusLabel = new Label("열린 메모 없음");
         statusLabel.setStyle("-fx-text-fill: gray;");
 
-        HBox buttonRow = new HBox(10, saveBtn, saveAsBtn, settingBtn, deleteBtn, themeBtn);
+        HBox buttonRow = new HBox(10, saveBtn, saveAsBtn, settingBtn, deleteBtn, modifyBtn ,themeBtn);
         VBox rightPanel = new VBox(10,
                 new Label("제목:"), titleField,
                 new Label("내용:"), memoArea,
                 buttonRow,
                 statusLabel
         );
-        rightPanel.setPrefWidth(500);
+        rightPanel.setPrefWidth(520);
 
-        HBox root = new HBox(20, leftPanel, rightPanel);
+        HBox root = new HBox(25, leftPanel, rightPanel);
         root.setPadding(new Insets(10));
 
         scene = new Scene(root, 800, 500);
@@ -176,6 +192,50 @@ public class MemoApp extends Application {
             }
         }
     }
+
+    private void handleModify() {
+        String title = titleField.getText().trim();
+        String content = memoArea.getText().trim();
+
+        if (title.isEmpty() || content.isEmpty()) {
+            showAlert("입력 오류", "제목과 내용을 모두 입력해주세요.");
+            return;
+        }
+
+        File newFile = new File(MemoManager.getMemoFolder(), title + ".txt");
+
+        if (currentMemoFileName != null && currentMemoFileName.equals(title + ".txt")) {
+            MemoManager.saveMemo(title, content);
+        } else {
+            if (newFile.exists()) {
+                Alert overwriteAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                overwriteAlert.setTitle("파일 덮어쓰기 경고");
+                overwriteAlert.setHeaderText("같은 제목의 메모가 이미 존재합니다.");
+                overwriteAlert.setContentText("덮어쓰시겠습니까?");
+                Optional<ButtonType> result = overwriteAlert.showAndWait();
+                if (result.isEmpty() || result.get() != ButtonType.OK) {
+                    title = MemoManager.getUniqueTitle(title);
+                    newFile = new File(MemoManager.getMemoFolder(), title + ".txt");
+                }
+            }
+            MemoManager.saveMemo(title, content);
+
+            if (currentMemoFileName != null) {
+                File oldFile = new File(MemoManager.getMemoFolder(), currentMemoFileName);
+                if (oldFile.exists()) {
+                    oldFile.delete();
+                }
+            }
+        }
+
+        titleField.clear();
+        memoArea.clear();
+        currentMemoFileName = null;
+        loadMemoList();
+        showAlert("저장 완료", "메모가 수정되었습니다..");
+
+    }
+
 
     // 다크/라이트 테마 전환
     private void toggleTheme() {
